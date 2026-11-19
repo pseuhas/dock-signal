@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Find nearby bike-share pickups and returns in New York City.">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://gbfs.citibikenyc.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Dock Signal | NYC Bike Share</title><link rel="stylesheet" href="./style.css"></head>
+<body><main>
+<header><a href="./" class="brand">◉ &nbsp; Dock Signal</a><span class="tag">NYC &nbsp;/&nbsp; Bike share</span></header>
+<section class="hero"><p class="eyebrow">Get rolling</p><h1>Find your next dock.</h1><p>Pick up a bike or find space to return one. Compare nearby stations by straight-line distance and open walking directions when you’re ready.</p></section>
+<section class="controls" aria-label="Search controls"><label>Start near <select id="landmark"></select></label><button id="locate" type="button">Use my location</button><button id="refresh" type="button">Refresh</button><p id="location-message" role="status">Your location stays in this tab.</p>
+<fieldset><legend>What do you need?</legend><div id="modes">
+<label><input type="radio" name="mode" value="pickup" checked><span>Any bike</span></label><label><input type="radio" name="mode" value="classic"><span>Classic</span></label><label><input type="radio" name="mode" value="electric"><span>E-bike</span></label><label><input type="radio" name="mode" value="return"><span>Open dock</span></label>
+</div></fieldset>
+<label class="toggle"><input id="available" type="checkbox" checked> Hide unavailable or not recently reported stations</label>
+</section>
+<section id="notice" role="status" aria-live="polite">Connecting to the bike-share feed…</section>
+<section class="body-grid"><section><h2 id="results-title">Nearby stations</h2><p id="result-note"></p><ol id="stations"></ol></section><aside><h2>Station layout</h2><p>Schematic only, not a route map. North is up.</p><svg id="layout" viewBox="0 0 420 300" role="img" aria-label="Schematic showing station positions relative to the selected origin"></svg><p><span class="origin-symbol">◆</span> Origin &nbsp; <span class="count-symbol">●</span> Number matches the list</p></aside></section>
+<noscript>This station finder requires JavaScript. Use the <a href="https://citibikenyc.com/explore">operator’s station map</a> instead.</noscript>
+<footer>Independent project, not affiliated with the operator. Data: <a href="https://citibikenyc.com/system-data">Citi Bike GBFS</a> · <a href="https://citibikenyc.com/data-sharing-policy">Data sharing policy</a> · <a href="https://citibikenyc.com/explore">Official map</a>. Counts can change before you arrive.</footer>
+</main><script type="module" src="./main.mjs"></script></body></html>
