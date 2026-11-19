@@ -1,0 +1,84 @@
+name: Record production walkthroughs
+on:
+  push:
+    branches: [portfolio-demo-capture]
+    paths: ['.github/workflows/portfolio-demo-capture.yml']
+permissions:
+  contents: read
+jobs:
+  walkthroughs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare isolated production smoke test
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+          if ! command -v ffmpeg; then sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; fi
+      - name: Record verified public UI
+        run: |
+          mkdir -p recordings
+          cat > capture.mjs <<'JS'
+          import { chromium } from 'playwright';
+          import { rename } from 'node:fs/promises';
+          const browser = await chromium.launch();
+          const hold = ms => new Promise(resolve => setTimeout(resolve, ms));
+          async function run(name, steps) {
+            const context = await browser.newContext({viewport:{width:1280,height:720}, recordVideo:{dir:'recordings',size:{width:1280,height:720}}, reducedMotion:'reduce'});
+            const page = await context.newPage();
+            const video = page.video();
+            try {
+              const res = await page.goto('https://pseuhas.github.io/'+name+'/', {timeout:20000});
+              if (!res?.ok()) throw new Error('Production page did not respond');
+              await steps(page);
+            } finally { await context.close(); }
+            await rename(await video.path(),'recordings/'+name+'.webm');
+          }
+          try {
+            await Promise.all([
+              run('dock-signal', async page => {
+                const notice = page.locator('#notice');
+                await page.locator('#stations li').first().waitFor({timeout:20000});
+                if (!/live/i.test(await notice.innerText()) || /stale|demo/i.test(await notice.innerText())) throw new Error('No live bike-share source at capture time');
+                const place = page.locator('#landmark');
+                const values = await place.locator('option').allTextContents();
+                await place.selectOption({label:values.find(s=>s.includes('Roosevelt Island'))});
+                await hold(3000);
+                await page.locator('input[value=electric]').check();
+                await hold(2800);
+                await page.locator('input[value=return]').check();
+                await page.locator('#stations li').first().waitFor();
+                await hold(3200);
+                await page.locator('#results-title').evaluate(el=>el.scrollIntoView({block:'start',behavior:'smooth'}));
+                await hold(4400);
+              }),
+              run('nyc-311-pulse', async page => {
+                await page.locator('#dashboard').waitFor({timeout:20000});
+                if (/demo|unavailable/i.test(await page.locator('#state').innerText())) throw new Error('No published source at capture time');
+                await hold(3000);
+                await page.locator('#area').selectOption({label:'Bronx'});
+                await hold(2500);
+                await page.locator('#search').scrollIntoViewIfNeeded();
+                await hold(900);
+                await page.locator('#search').pressSequentially('heat', {delay:100});
+                await page.locator('#categories').getByText(/HEAT\/HOT WATER/i).first().waitFor();
+                await hold(5100);
+              })
+            ]);
+          } finally { await browser.close(); }
+          JS
+          node capture.mjs
+      - name: Export captioned MP4 clips
+        run: |
+          for n in dock-signal nyc-311-pulse; do
+            if [ "$n" = dock-signal ]; then title='DOCK SIGNAL'; caption='NYC BIKE SHARE   /   FIND A BIKE OR AN OPEN DOCK'; else title='NYC 311 PULSE'; caption='NYC OPEN DATA   /   COMPARE A BOROUGH WEEK OVER WEEK'; fi
+            ffmpeg -hide_banner -loglevel error -y -i "recordings/$n.webm" -vf "scale=1152:648,pad=1280:800:64:80:color=0x101820,drawtext=font=DejaVuSans:text='$title':fontcolor=white:fontsize=28:x=64:y=20,drawtext=font=DejaVuSans:text='$caption':fontcolor=0x78E1D8:fontsize=17:x=64:y=755,drawtext=font=DejaVuSans:text='PRODUCTION':fontcolor=0x78E1D8:fontsize=17:x=w-tw-64:y=30" -vcodec libx264 -pix_fmt yuv420p -movflags +faststart -an "recordings/$n.mp4"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-walkthroughs
+          path: recordings/*.mp4
+          retention-days: 7
