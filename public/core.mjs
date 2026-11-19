@@ -80,6 +80,12 @@ export function rankStations(rows, origin, {mode='pickup',availableOnly=true,lim
     .filter(r=>r.distance<=radius && (!availableOnly||(r.operational&&r.value>0&&(!liveOnly||r.current))))
     .sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id)).slice(0,limit);
 }
+// Only promote observations that are fresh, available, and usable for the selected action.
+export function closestAvailable(snapshot, origin, mode, now=Date.now()) {
+  return ageState(snapshot,now)==='live'
+    ? rankStations(snapshot.rows,origin,{mode,availableOnly:true,limit:1,liveOnly:true,now})[0] ?? null
+    : null;
+}
 export function walkingLink(row) {
   return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(row.lat+','+row.lon)+'&travelmode=walking';
 }

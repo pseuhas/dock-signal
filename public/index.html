@@ -6,13 +6,13 @@
 <title>Dock Signal | NYC Bike Share</title><link rel="stylesheet" href="./style.css"></head>
 <body><main>
 <header><a href="./" class="brand">◉ &nbsp; Dock Signal</a><span class="tag">NYC &nbsp;/&nbsp; Bike share</span></header>
-<section class="hero"><p class="eyebrow">Get rolling</p><h1>Find your next dock.</h1><p>Pick up a bike or find space to return one. Compare nearby stations by straight-line distance and open walking directions when you’re ready.</p></section>
-<section class="controls" aria-label="Search controls"><label>Start near <select id="landmark"></select></label><button id="locate" type="button">Use my location</button><button id="refresh" type="button">Refresh</button><p id="location-message" role="status">Your location stays in this tab.</p>
-<fieldset><legend>What do you need?</legend><div id="modes">
-<label><input type="radio" name="mode" value="pickup" checked><span>Any bike</span></label><label><input type="radio" name="mode" value="classic"><span>Classic</span></label><label><input type="radio" name="mode" value="electric"><span>E-bike</span></label><label><input type="radio" name="mode" value="return"><span>Open dock</span></label>
-</div></fieldset>
-<label class="toggle"><input id="available" type="checkbox" checked> Hide unavailable or not recently reported stations</label>
+<section class="hero"><p class="eyebrow">Citi Bike availability</p><h1>Find your next dock.</h1><p id="origin-label">Near Roosevelt Island</p></section>
+<fieldset class="trip"><legend class="sr-only">What do you need?</legend><div id="modes"><label><input type="radio" name="mode" value="pickup" checked><span>Pick up a bike</span></label><label><input type="radio" name="mode" value="return"><span>Return a bike</span></label></div></fieldset>
+<section class="featured" id="featured" aria-labelledby="featured-label" aria-live="polite">
+<div class="featured-copy"><p class="eyebrow" id="featured-label">Closest available pickup</p><h2 id="featured-name">Checking nearby stations…</h2><p id="featured-note"></p><a id="directions" class="directions" target="_blank" rel="noopener noreferrer" hidden>Walking directions</a></div>
+<div class="feature-count" id="featured-count" hidden><strong id="featured-number"></strong><span id="featured-unit"></span></div>
 </section>
+<div class="origin-control"><button id="locate" type="button">Use my location</button><details class="advanced"><summary>More options</summary><div class="controls"><label>Start near <select id="landmark"></select></label><label>Bike type <select id="kind"><option value="pickup">Any bike</option><option value="classic">Classic</option><option value="electric">E-bike</option></select></label><button id="refresh" type="button">Refresh</button><label class="toggle"><input id="available" type="checkbox" checked> Hide unavailable or not recently reported stations</label></div></details><p id="location-message" role="status">Your location stays in this tab.</p></div>
 <section id="notice" role="status" aria-live="polite">Connecting to the bike-share feed…</section>
 <section class="body-grid"><section><h2 id="results-title">Nearby stations</h2><p id="result-note"></p><ol id="stations"></ol></section><aside><h2>Station layout</h2><p>Schematic only, not a route map. North is up.</p><svg id="layout" viewBox="0 0 420 300" role="img" aria-label="Schematic showing station positions relative to the selected origin"></svg><p><span class="origin-symbol">◆</span> Origin &nbsp; <span class="count-symbol">●</span> Number matches the list</p></aside></section>
 <noscript>This station finder requires JavaScript. Use the <a href="https://citibikenyc.com/explore">operator’s station map</a> instead.</noscript>

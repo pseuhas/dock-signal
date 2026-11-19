@@ -1,4 +1,4 @@
-import {LANDMARKS, FRESH_MS, MAX_CACHE_MS, readFeeds, ageState, rankStations, sample, walkingLink} from './core.mjs';
+import {LANDMARKS, FRESH_MS, MAX_CACHE_MS, readFeeds, ageState, rankStations, closestAvailable, sample, walkingLink} from './core.mjs';
 const $=x=>document.getElementById(x);
 const params=new URLSearchParams(location.search);
 const demo=params.get('demo')==='1';
@@ -6,7 +6,7 @@ const select=$('landmark'), refresh=$('refresh'), locate=$('locate'), stations=$
 const svg=$('layout'), notice=$('notice'), note=$('result-note');
 let origin=LANDMARKS.island,snapshot=null,error=false,busy=false,timer,locationRequest=0;
 for(const [key,v] of Object.entries(LANDMARKS))select.add(new Option(v.name,key));
-function currentMode(){return document.querySelector('input[name=mode]:checked').value;}
+function currentMode(){return document.querySelector('input[name=mode]:checked').value==='return'?'return':$('kind').value;}
 const labels={pickup:'bikes',return:'docks',classic:'classic bikes',electric:'e-bikes'};
 const time=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'numeric',timeZoneName:'short'});
 function append(parent,tag,text,cls=''){const el=document.createElement(tag);el.className=cls;el.textContent=text;parent.append(el);return el;}
@@ -27,6 +27,29 @@ function draw(rows){
   }
   drawElement('path',{d:'M210 142L218 150L210 158L202 150Z',fill:'#a3442b',stroke:'#fff','stroke-width':1.5});
 }
+const distanceLabel=(meters)=>meters<1000?Math.round(meters)+' m':(meters/1000).toFixed(2)+' km';
+function renderFeatured(status,mode,top){
+  const returning=mode==='return', plural=labels[mode];
+  const unit=top?.value===1?{pickup:'bike',return:'dock',classic:'classic bike',electric:'e-bike'}[mode]:plural;
+  const name=top?.name??{unavailable:'Checking nearby stations…',sample:'Live availability unavailable',stale:'No fresh station readings',live:'No fresh match nearby'}[status];
+  $('origin-label').textContent='Near '+origin.name;
+  $('kind').disabled=returning;
+  const updates={
+    'featured-label':returning?'Closest available return':'Closest available pickup',
+    'featured-name':name,
+    'featured-note':top?distanceLabel(top.distance)+' straight-line · walking route may differ. Reported '+time.format(top.reportedAt)+'.'
+         :status==='live'?'No recently reported station within 2.5 km for this choice.'
+         :status==='unavailable'?'Looking for a recently reported station.':'Check the official map or browse the separate results below.',
+    'featured-number':top?String(top.value):'',
+    'featured-unit':top?unit+(returning?' open':' available'):'',
+  };
+  for(const [id,value] of Object.entries(updates)){if($(id).textContent!==value)$(id).textContent=value;}
+  const link=$('directions');
+  link.hidden=$('featured-count').hidden=!top;
+  if(top){link.href=walkingLink(top);link.setAttribute('aria-label','Walking directions to '+top.name+' (opens a new tab)');}
+  else{link.removeAttribute('href');link.removeAttribute('aria-label');}
+  $('featured').dataset.state=status;
+}
 function render(){
   const now=Date.now();
   if(snapshot&&!snapshot.sample&&now-snapshot.updatedAt>MAX_CACHE_MS)snapshot=sample(now);
@@ -40,13 +63,14 @@ function render(){
   notice.dataset.state=status;
   if(notice.textContent!==labelsByState[status])notice.textContent=labelsByState[status];
   const ranked=snapshot?rankStations(snapshot.rows,origin,{mode,availableOnly:$('available').checked,liveOnly:status==='live'}):[];
+  renderFeatured(status,mode,closestAvailable(snapshot,origin,mode,now));
   note.textContent=(ranked.length?ranked.length+' shown':'No results')+' within 2.5 km of '+origin.name+' · straight-line distance';
   stations.replaceChildren();
   for(const [i,r] of ranked.entries()){
     const li=append(stations,'li',''), badge=append(li,'span',String(i+1),'order');badge.setAttribute('aria-hidden','true');
     const body=append(li,'div','');
     append(body,'h3',r.name);
-    const distance=r.distance<1000?Math.round(r.distance)+' m':(r.distance/1000).toFixed(2)+' km';
+    const distance=distanceLabel(r.distance);
     const availability=!r.operational?'Station not accepting this action':(!r.current&&!snapshot.sample?'Station report older than 5 min or unavailable':null);
     append(body,'p',[distance,availability].filter(Boolean).join(' · '));
     if(!snapshot.sample){const a=append(body,'a','Walking directions ↗');a.href=walkingLink(r);a.target='_blank';a.rel='noopener noreferrer';a.setAttribute('aria-label','Walking directions to '+r.name+' (opens a new tab)');}
@@ -74,6 +98,7 @@ async function reload(){
 select.addEventListener('change',()=>{locationRequest++;origin=LANDMARKS[select.value];$('location-message').textContent='Your location stays in this tab.';render();});
 $('modes').addEventListener('change',render);
 $('available').addEventListener('change',render);
+$('kind').addEventListener('change',render);
 refresh.addEventListener('click',reload);
 locate.addEventListener('click',()=>{
   const request=++locationRequest;
