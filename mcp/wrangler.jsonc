@@ -1,0 +1,7 @@
+{
+  "name": "dock-signal-mcp",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": false }
+}

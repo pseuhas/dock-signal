@@ -22,3 +22,9 @@ A small, live NYC bike-share finder. Choose where to start, then see the nearest
 A current station-finder view needs two small public requests, not a streaming warehouse. Browser-side GBFS eliminates a proxy, API keys and recurring cost, avoids logging user coordinates, and can deploy as static files. Tradeoff: there is no server-side availability history or cross-client cache. A scheduler or queue is justified only if a future product needs aggregate history and has clearance under the operator's policy.
 
 Vanilla ES modules and Node's test runner keep installation trivial; pure parsing, freshness and ranking functions are tested separately from rendering. An SVG schematic is intentionally lighter than a map embed and never requests external map tiles. Browser support assumes modern browsers with fetch, secure geolocation (HTTPS or localhost) and ES modules.
+
+## AI engineering: grounded recommendations over MCP
+
+The public map remains static. The optional, read-only MCP tool `recommend_dock` uses the same source and validation logic, then returns an eligible station and a distinct backup. The application result carries source and per-station timestamps, no invented walk ETA, and an explicit no-recommendation state for stale or failed feeds. It does not request, log, or store GPS; the browser app handles location locally.
+
+See [the MCP setup and evaluation](mcp/README.md). The streamable HTTP adapter is deployment-ready, but this repository does not advertise a hosted MCP endpoint.

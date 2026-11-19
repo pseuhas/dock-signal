@@ -15,6 +15,9 @@ jobs:
         with:
           node-version: 24
       - run: npm test
+      - run: npm ci --prefix mcp --ignore-scripts --no-audit --no-fund
+      - run: npm test --prefix mcp
+      - run: node --test experiments/walk-routing/test/*.test.mjs
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: test
