@@ -32,11 +32,17 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      # Re-running this job must not select an artifact left by an earlier attempt.
+      DOCK_PAGES_ARTIFACT: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
+          name: ${{ env.DOCK_PAGES_ARTIFACT }}
       - uses: actions/deploy-pages@v4
         id: deploy
+        with:
+          artifact_name: ${{ env.DOCK_PAGES_ARTIFACT }}
