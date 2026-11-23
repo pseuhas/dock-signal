@@ -1,6 +1,6 @@
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
-const files={'/':'index.html','/index.html':'index.html','/style.css':'style.css','/main.mjs':'main.mjs','/core.mjs':'core.mjs'};
+const files={'/':'index.html','/index.html':'index.html','/style.css':'style.css','/main.mjs':'main.mjs','/core.mjs':'core.mjs','/island.mjs':'island.mjs'};
 const types={html:'text/html; charset=utf-8',css:'text/css; charset=utf-8',mjs:'text/javascript; charset=utf-8'};
 const port=process.env.PORT?Number(process.env.PORT):4173;
 createServer(async(req,res)=>{
@@ -11,4 +11,4 @@ createServer(async(req,res)=>{
     const body=await readFile(new URL('../public/'+file,import.meta.url));
     res.writeHead(200,{'Content-Type':types[file.split('.').at(-1)],'X-Content-Type-Options':'nosniff'}).end(req.method==='GET'?body:undefined);
   }catch{res.writeHead(500).end('Local preview error');}
-}).listen(port,'127.0.0.1',()=>console.log('Dock Signal: http://localhost:'+port));
+}).listen(port,'127.0.0.1',function(){console.log('Dock Signal: http://localhost:'+this.address().port);});

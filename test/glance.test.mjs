@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {LANDMARKS,FRESH_MS,closestAvailable,sample} from '../public/core.mjs';
 const now=Date.parse('2026-11-19T18:40:00Z');
-const origin=LANDMARKS.island;
+const origin=LANDMARKS.grand;
 const base={...origin,installed:true,renting:true,returning:true,bikes:2,docks:1,ebikes:0,classics:2,reportedAt:now-5_000};
 const rows=[
   {...base,id:'freshness',reportedAt:now-FRESH_MS-1},
