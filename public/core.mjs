@@ -1,8 +1,9 @@
+import {onIslandOrigin, onIslandStation} from './island.mjs';
 const ROOT = 'https://gbfs.citibikenyc.com/gbfs/en/';
 export const FRESH_MS = 5 * 60_000;
 export const MAX_CACHE_MS = 24 * 3600_000;
 export const LANDMARKS = {
-  island: {name:'Roosevelt Island',lat:40.7573,lon:-73.9541},
+  island: {name:'Roosevelt Island',lat:40.7573,lon:-73.9541,area:'roosevelt-island'},
   grand: {name:'Grand Central',lat:40.7527,lon:-73.9772},
   LIC: {name:'Hunters Point',lat:40.7436,lon:-73.9567},
   union: {name:'Union Square',lat:40.7358,lon:-73.9904},
@@ -32,7 +33,7 @@ export function joinFeeds(info, status, now=Date.now()) {
   for (const x of entries(info)) {
     if (x?.station_id==null || typeof x.name!=='string' || !x.name.trim()) continue;
     const lat=number(x.lat), lon=number(x.lon);
-    if (Math.abs(lat)<=90 && Math.abs(lon)<=180) positions.set(String(x.station_id),{name:x.name.trim(),lat,lon,capacity:count(x.capacity)});
+    if (Math.abs(lat)<=90 && Math.abs(lon)<=180) positions.set(String(x.station_id),{name:x.name.trim(),lat,lon,shortName:typeof x.short_name==='string'?x.short_name:null,capacity:count(x.capacity)});
   }
   const rows=new Map();
   for (const x of entries(status)) {
@@ -80,11 +81,18 @@ export function rankStations(rows, origin, {mode='pickup',availableOnly=true,lim
     .filter(r=>r.distance<=radius && (!availableOnly||(r.operational&&r.value>0&&(!liveOnly||r.current))))
     .sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id)).slice(0,limit);
 }
-// Only promote observations that are fresh, available, and usable for the selected action.
+// Never present the across-water alternative as walkable. Wider results remain
+// available under Nearby stations, labeled as distance-only, including during partial outages.
+export function nearbyRecommendations(snapshot, origin, mode, now=Date.now()) {
+  const island=onIslandOrigin(origin,rankDistance);
+  const candidates=ageState(snapshot,now)==='live'
+    ? rankStations(island?snapshot.rows.filter(row=>onIslandStation(row,rankDistance)):snapshot.rows,
+      origin,{mode,availableOnly:true,limit:2,liveOnly:true,now})
+    : [];
+  return {island, best:candidates[0]??null, backup:candidates[1]??null};
+}
 export function closestAvailable(snapshot, origin, mode, now=Date.now()) {
-  return ageState(snapshot,now)==='live'
-    ? rankStations(snapshot.rows,origin,{mode,availableOnly:true,limit:1,liveOnly:true,now})[0] ?? null
-    : null;
+  return nearbyRecommendations(snapshot,origin,mode,now).best;
 }
 export function walkingLink(row) {
   return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(row.lat+','+row.lon)+'&travelmode=walking';

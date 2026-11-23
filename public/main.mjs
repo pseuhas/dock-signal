@@ -1,4 +1,4 @@
-import {LANDMARKS, FRESH_MS, MAX_CACHE_MS, readFeeds, ageState, rankStations, closestAvailable, sample, walkingLink} from './core.mjs';
+import {LANDMARKS, FRESH_MS, MAX_CACHE_MS, readFeeds, ageState, rankStations, nearbyRecommendations, sample, walkingLink} from './core.mjs';
 const $=x=>document.getElementById(x);
 const params=new URLSearchParams(location.search);
 const demo=params.get('demo')==='1';
@@ -28,17 +28,17 @@ function draw(rows){
   drawElement('path',{d:'M210 142L218 150L210 158L202 150Z',fill:'#a3442b',stroke:'#fff','stroke-width':1.5});
 }
 const distanceLabel=(meters)=>meters<1000?Math.round(meters)+' m':(meters/1000).toFixed(2)+' km';
-function renderFeatured(status,mode,top){
+function renderFeatured(status,mode,{best:top,backup,island}){
   const returning=mode==='return', plural=labels[mode];
   const unit=top?.value===1?{pickup:'bike',return:'dock',classic:'classic bike',electric:'e-bike'}[mode]:plural;
-  const name=top?.name??{unavailable:'Checking nearby stations…',sample:'Live availability unavailable',stale:'No fresh station readings',live:'No fresh match nearby'}[status];
+  const name=top?.name??{unavailable:'Checking nearby stations…',sample:'Live availability unavailable',stale:'No fresh station readings',live:island?'No fresh match on the island':'No fresh match nearby'}[status];
   $('origin-label').textContent='Near '+origin.name;
   $('kind').disabled=returning;
   const updates={
-    'featured-label':returning?'Closest available return':'Closest available pickup',
+    'featured-label':island?(returning?'Return on Roosevelt Island':'Pick up on Roosevelt Island'):(returning?'Closest available return':'Closest available pickup'),
     'featured-name':name,
-    'featured-note':top?distanceLabel(top.distance)+' straight-line · walking route may differ. Reported '+time.format(top.reportedAt)+'.'
-         :status==='live'?'No recently reported station within 2.5 km for this choice.'
+    'featured-note':top?distanceLabel(top.distance)+' straight-line · reported '+time.format(top.reportedAt)+'.'
+         :status==='live'?(island?'No island station recently reported availability. Browse other banks below or check the official map.':'No recently reported station within 2.5 km for this choice.')
          :status==='unavailable'?'Looking for a recently reported station.':'Check the official map or browse the separate results below.',
     'featured-number':top?String(top.value):'',
     'featured-unit':top?unit+(returning?' open':' available'):'',
@@ -48,6 +48,15 @@ function renderFeatured(status,mode,top){
   link.hidden=$('featured-count').hidden=!top;
   if(top){link.href=walkingLink(top);link.setAttribute('aria-label','Walking directions to '+top.name+' (opens a new tab)');}
   else{link.removeAttribute('href');link.removeAttribute('aria-label');}
+  const second=$('backup');
+  second.hidden=!backup;
+  if(backup){
+    second.textContent='Backup: '+backup.name;
+    second.href=walkingLink(backup);
+  }else{
+    second.textContent='';
+    second.removeAttribute('href');
+  }
   $('featured').dataset.state=status;
 }
 function render(){
@@ -63,8 +72,9 @@ function render(){
   notice.dataset.state=status;
   if(notice.textContent!==labelsByState[status])notice.textContent=labelsByState[status];
   const ranked=snapshot?rankStations(snapshot.rows,origin,{mode,availableOnly:$('available').checked,liveOnly:status==='live'}):[];
-  renderFeatured(status,mode,closestAvailable(snapshot,origin,mode,now));
-  note.textContent=(ranked.length?ranked.length+' shown':'No results')+' within 2.5 km of '+origin.name+' · straight-line distance';
+  const choices=nearbyRecommendations(snapshot,origin,mode,now);
+  renderFeatured(status,mode,choices);
+  note.textContent=(ranked.length?ranked.length+' shown':'No results')+' within 2.5 km of '+origin.name+' · straight-line distance, not a walking route'+(choices.island?' · includes other banks':'');
   stations.replaceChildren();
   for(const [i,r] of ranked.entries()){
     const li=append(stations,'li',''), badge=append(li,'span',String(i+1),'order');badge.setAttribute('aria-hidden','true');
@@ -106,7 +116,7 @@ locate.addEventListener('click',()=>{
   $('location-message').textContent='Waiting for your browser…';
   navigator.geolocation.getCurrentPosition(p=>{
     if(request!==locationRequest)return;
-    origin={name:'your location',lat:p.coords.latitude,lon:p.coords.longitude};
+    origin={name:'your location',lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy};
     select.selectedIndex=-1;
     $('location-message').textContent='Using your location in this tab only.';
     render();
